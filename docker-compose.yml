@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8010:8010"
+    environment:
+      - PORT=8010
+      - GOOGLE_CLOUD_PROJECT=gcpxmlb25
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcpxmlb25-e063bdf91528.json
+    volumes:
+      - ./gcpxmlb25-e063bdf91528.json:/app/gcpxmlb25-e063bdf91528.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s 
+
+      

@@ -5,7 +5,7 @@ TEST_ENV = os.getenv('TEST_ENV', 'dev').lower()  # dev, local_docker, or gcp
 
 # Server URLs
 DEV_SERVER_URL = "http://127.0.0.1:8000"
-LOCAL_DOCKER_URL = "http://localhost:8080"
+LOCAL_DOCKER_URL = "http://localhost:8010"
 GCP_SERVER_URL = ""
 
 # Base URL for tests based on environment
