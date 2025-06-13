@@ -7,6 +7,7 @@ from google.auth.transport.requests import Request
 
 LOCATION="us-central1"
 PROJECT_ID="gcpxmlb25"
+# PROJECT_ID = "842207255412"
 AGENT_ENGINE_ID="638851440109944832"
 SERVICE_ACCOUNT_FILE = "gcpxmlb25-e063bdf91528.json"
 
@@ -36,7 +37,10 @@ def get_google_auth_token():
 def test_create_a_session_v2():
     """Creates a session, polls for completion, and returns its ID."""
     token = get_google_auth_token()
-    create_session_url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions"
+    print(f"Auth token: {token}")
+    # create_session_url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions"
+    create_session_url = f"https://aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions"
+
     headers = {
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
@@ -63,15 +67,19 @@ def test_create_a_session_v2():
 
         print(f"\nCreated operation: {operation_name}. Polling for completion...")
 
-        operation_status_url = f"https://us-central1-aiplatform.googleapis.com/v1beta1/{operation_name}" # Use the full API path for polling
-        # You might need to adjust this base URL if your API is not us-central1 specific for operations
-        # A more robust way might be: f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/{operation_name}"
+        # Use the same project ID and location as the create session request
+        # operation_status_url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/operations/{operation_name.split('/')[-1]}"
+        # operation_status_url = f"https://aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/operations/{operation_name.split('/')[-1]}"
+        operation_status_url = f"https://aiplatform.googleapis.com/v1beta1/{operation_name}"
+# Or, if you want to be explicit with the base URL:
 
         max_retries = 10
         for i in range(max_retries):
             time.sleep(2) # Wait for 2 seconds before polling
             print(f"Polling operation (attempt {i+1}/{max_retries})...")
             # **THE FIX IS HERE: Pass headers to the GET request**
+            print(f"Polling URL: {operation_status_url}") # Add this
+            print(f"Headers for polling: {headers}") # Add this
             op_response = requests.get(operation_status_url, headers=headers)
             op_response.raise_for_status()
             op_json = op_response.json()
@@ -148,8 +156,9 @@ def test_send_query():
         pytest.fail(f"Failed to create session: {e}")
 
     """Test sending a query to the agent"""
-    url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{current_session_id}:query"
-    # url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{SESSION_ID}:run"
+    # url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{current_session_id}:query"
+    url = f"https://aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}:query"
+    # url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{current_session_id}:run"
     
     # Get authentication token
     token = get_google_auth_token()
@@ -173,8 +182,8 @@ def test_send_query():
     "question": "I feel panic.  How can you help me?",
     "userId": "test_user_001",
     # Use the dynamically obtained current_session_id here too
-    "session_id": f"projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{current_session_id}"
-    # "session_id": SESSION_ID
+    # "session_id": f"projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{current_session_id}"
+    "session_id": current_session_id
     },
     "method": "query"
     }
