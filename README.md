@@ -5,6 +5,8 @@ speakease backend
 ---
 poetry run uvicorn app.main:app --reload
 
+$env:GOOGLE_APPLICATION_CREDENTIALS = "gcpxmlb25-e063bdf91528.json"
+
 $env:TEST_ENV="dev"; pytest tests/test_main.py -v -s
 
 

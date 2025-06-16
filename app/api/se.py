@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Request
+from fastapi.responses import JSONResponse
 from app.services.se_user_management import (
     get_se_user,
     create_se_user,
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 import logging
 from typing import List, Optional, Dict, Any
 import requests
+import httpx
 
 
 router = APIRouter()
@@ -158,76 +160,61 @@ async def incoming_paraphrase_endpoint(request: ParaphraseRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/text_logs/{uid}/{session_id}")
-async def add_text_log_endpoint(uid: str, session_id: str, request: TextLogRequest):
+async def add_text_log_endpoint(request: Request, uid: str, session_id: str):
     """
-    Add a new text log entry.
-    
-    Args:
-        uid (str): User ID
-        session_id (str): Session ID
-        request (TextLogRequest): Request containing text content and optional text type
-        
-    Returns:
-        dict: Response indicating success or failure
+    Proxy text log creation to another server.
     """
     try:
-        success = add_text_log(uid, session_id, request.text_content, request.text_type)
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to add text log")
-        return {"status": "success", "message": "Text log added successfully"}
+        body = await request.body()
+        headers = dict(request.headers)
+        headers["X-Internal-Token"] = "my-shared-secret"  # optional security
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"http://35.192.165.158:8020/apps/se/text_logs/{uid}/{session_id}",
+                content=body,
+                headers=headers
+            )
+
+        return JSONResponse(status_code=response.status_code, content=response.json())
     except Exception as e:
         logger.error(f"Error in add_text_log endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/text_logs/{uid}/{session_id}")
-async def get_session_text_logs_endpoint(uid: str, session_id: str, text_type: Optional[str] = None):
+async def get_session_text_logs_endpoint(request: Request, uid: str, session_id: str, text_type: Optional[str] = None):
     """
-    Get all text logs for a specific user and session.
-    
-    Args:
-        uid (str): User ID
-        session_id (str): Session ID
-        text_type (str, optional): Filter by text type
-        
-    Returns:
-        dict: Response containing the text logs
+    Proxy text log retrieval to another server.
     """
     try:
-        logger.info(f"Received request for session text logs - uid: {uid}, session_id: {session_id}, text_type: {text_type}")
-        logs = get_session_text_logs(uid, session_id, text_type)
-        logger.info(f"Retrieved {len(logs)} logs for session {session_id}")
-        if len(logs) > 0:
-            logger.info(f"First log entry: {logs[0]}")
-        return {
-            "status": "success",
-            "logs": logs
-        }
+        headers = dict(request.headers)
+        headers["X-Internal-Token"] = "my-shared-secret"  # optional security
+
+        async with httpx.AsyncClient() as client:
+            url = f"http://35.192.165.158:8020/apps/se/text_logs/{uid}/{session_id}"
+            if text_type:
+                url += f"?text_type={text_type}"
+            response = await client.get(url, headers=headers)
+
+        return JSONResponse(status_code=response.status_code, content=response.json())
     except Exception as e:
         logger.error(f"Error in get_session_text_logs endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/latest_text_logs/{uid}")
-async def get_latest_text_logs_endpoint(uid: str, limit: int = 10):
+async def get_latest_text_logs_endpoint(request: Request, uid: str, limit: int = 10):
     """
-    Get the latest text logs for a specific user.
-    
-    Args:
-        uid (str): User ID
-        limit (int, optional): Number of latest logs to return. Defaults to 10
-        
-    Returns:
-        dict: Response containing the latest text logs
+    Proxy latest text log retrieval to another server.
     """
     try:
-        logger.info(f"Received request for latest text logs - uid: {uid}, limit: {limit}")
-        logs = get_latest_text_logs(uid, limit)
-        logger.info(f"Retrieved {len(logs)} logs for user {uid}")
-        if len(logs) > 0:
-            logger.info(f"First log entry: {logs[0]}")
-        return {
-            "status": "success",
-            "logs": logs
-        }
+        headers = dict(request.headers)
+        headers["X-Internal-Token"] = "my-shared-secret"  # optional security
+
+        async with httpx.AsyncClient() as client:
+            url = f"http://35.192.165.158:8020/apps/se/latest_text_logs/{uid}?limit={limit}"
+            response = await client.get(url, headers=headers)
+
+        return JSONResponse(status_code=response.status_code, content=response.json())
     except Exception as e:
         logger.error(f"Error in get_latest_text_logs endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
