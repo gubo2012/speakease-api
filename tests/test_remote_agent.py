@@ -5,6 +5,7 @@ import os
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 import json
+from datetime import datetime
 
 LOCATION="us-central1"
 PROJECT_ID="gcpxmlb25"
@@ -210,7 +211,7 @@ def test_send_query():
         print(f"Raw response content: {response.text}")
         raise
 
-def test_delete_a_session():
+def test_delete_a_session(SESSION_ID_Delete = SESSION_ID_Delete):
     """Test deleting a specific session from Google Cloud AI Platform"""
     url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{SESSION_ID_Delete}"
     
@@ -277,6 +278,52 @@ def test_create_a_session():
     except ValueError as e:
         print(f"\nFailed to parse JSON response: {str(e)}")
         print(f"Raw response content: {response.text}")
+        raise
+
+def test_delete_last_5_sessions():
+    """Test deleting the 5 earliest sessions based on createTime"""
+    # First get all sessions
+    url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions"
+    
+    # Get authentication token
+    token = get_google_auth_token()
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        # Get all sessions
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        sessions_data = response.json()
+        
+        if 'sessions' not in sessions_data:
+            print("No sessions found")
+            return
+        
+        # Sort sessions by createTime
+        sessions = sessions_data['sessions']
+        sessions.sort(key=lambda x: datetime.fromisoformat(x['createTime'].replace('Z', '+00:00')))
+        
+        # Get the 5 earliest sessions
+        earliest_sessions = sessions[:5]
+        
+        print("\nDeleting the following 5 earliest sessions:")
+        for session in earliest_sessions:
+            session_id = session['name'].split('/')[-1]
+            create_time = session['createTime']
+            print(f"Session ID: {session_id}, Created: {create_time}")
+            
+            # Delete each session
+            test_delete_a_session(session_id)
+            print(f"Successfully deleted session {session_id}")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"\nRequest failed with error: {str(e)}")
+        raise
+    except ValueError as e:
+        print(f"\nFailed to parse response: {str(e)}")
         raise
 
         
