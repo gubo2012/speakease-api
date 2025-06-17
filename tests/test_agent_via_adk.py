@@ -7,6 +7,7 @@ from google.auth.transport.requests import Request
 from google import adk
 from google.adk.sessions import VertexAiSessionService
 # from google.adk import types
+from vertexai import agent_engines
 
 LOCATION = "us-central1"
 PROJECT_ID = "gcpxmlb25"
@@ -14,8 +15,7 @@ PROJECT_ID = "gcpxmlb25"
 AGENT_ENGINE_ID = "638851440109944832"
 SERVICE_ACCOUNT_FILE = "gcpxmlb25-e063bdf91528.json"
 
-# SESSION_ID = "2805844272677388288"
-SESSION_ID = "6652622041893568512"
+SESSION_ID = "6499499654562971648"
 
 
 app_name=AGENT_ENGINE_ID
@@ -53,6 +53,33 @@ async def run_agent_demo():
             user_id=user_id
         )
         print(f"Session created with ID: {session.id}")
+
+        agent = agent_engines.get(app_name)
+
+        
+
+        print(f"Created session for user ID: {user_id}")
+        print("Type 'quit' to exit.")
+        while True:
+            user_input = input("Input: ")
+            if user_input == "quit":
+                break
+
+            for event in agent.stream_query(
+                user_id=user_id,
+                session_id=session.id,
+                message=user_input
+            ):
+                if "content" in event:
+                    if "parts" in event["content"]:
+                        parts = event["content"]["parts"]
+                        for part in parts:
+                            if "text" in part:
+                                text_part = part["text"]
+                                print(f"Response: {text_part}")
+
+
+
 
 
         
