@@ -4,6 +4,7 @@ import time
 import os
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+import json
 
 LOCATION="us-central1"
 PROJECT_ID="gcpxmlb25"
@@ -12,8 +13,8 @@ AGENT_ENGINE_ID="638851440109944832"
 SERVICE_ACCOUNT_FILE = "gcpxmlb25-e063bdf91528.json"
 
 # SESSION_ID = "2805844272677388288"
-SESSION_ID = "7884778752444465152"
-SESSION_ID_Delete = "8434851225681264640"
+SESSION_ID = "6499499654562971648"
+SESSION_ID_Delete = "6917349257489940480"
 
 def get_google_auth_token():
     """Get OAuth2 token using service account credentials"""
@@ -148,17 +149,8 @@ def test_get_a_session():
     assert response.status_code == 200
 
 def test_send_query():
-
-    # 1. Create a dynamic session first
-    try:
-        current_session_id = test_create_a_session_v2()
-    except Exception as e:
-        pytest.fail(f"Failed to create session: {e}")
-
-    """Test sending a query to the agent"""
-    # url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{current_session_id}:query"
-    url = f"https://aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}:query"
-    # url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{current_session_id}:run"
+    """Test sending a streaming query to the agent"""
+    url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}:streamQuery?alt=sse"
     
     # Get authentication token
     token = get_google_auth_token()
@@ -167,49 +159,48 @@ def test_send_query():
         'Content-Type': 'application/json'
     }
     
-    # # Prepare the request payload
-    # payload = {
-    #     "content": {
-    #         "role": "user",
-    #         "parts": [
-    #             { "text": "I feel panic.  How can you help me?" }
-    #         ]
-    #     }
-    # }
-
+    # Prepare the request payload
     payload = {
-    "input": {
-    "question": "I feel panic.  How can you help me?",
-    "userId": "test_user_001",
-    # Use the dynamically obtained current_session_id here too
-    # "session_id": f"projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{AGENT_ENGINE_ID}/sessions/{current_session_id}"
-    "session_id": current_session_id
-    },
-    "method": "query"
+        "class_method": "stream_query",
+        "input": {
+            "message": "I feel panic. How can you help me?",
+            "user_id": "test_user_001",
+        }
     }
-
-
     
     print("\nMaking API request to:", url)
     print("Request payload:", payload)
-    print("Headers:", {k: v[:20] + '...' if k == 'Authorization' else v for k, v in headers.items()})
     
     try:
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload, stream=True)
         print("\nSend Query Response:")
-        print(response)
         print(f"Status Code: {response.status_code}")
-        print(f"Response Headers: {dict(response.headers)}")
-        print(f"Response Content: {response.text}")
         
         if response.status_code != 200:
             print(f"\nError: Request failed with status code {response.status_code}")
             if response.text:
                 print(f"Error details: {response.text}")
             assert False, f"Request failed with status code {response.status_code}"
-            
-        response_json = response.json()
-        print(f"Response JSON: {response_json}")
+        
+        # Process the streaming response
+        for line in response.iter_lines():
+            if line:
+                # Decode the line and remove the "data: " prefix if present
+                line_text = line.decode('utf-8')
+                if line_text.startswith('data: '):
+                    line_text = line_text[6:]  # Remove "data: " prefix
+                try:
+                    event = json.loads(line_text)
+                    if "content" in event:
+                        if "parts" in event["content"]:
+                            parts = event["content"]["parts"]
+                            for part in parts:
+                                if "text" in part:
+                                    text_part = part["text"]
+                                    print(f"Response: {text_part}")
+                except json.JSONDecodeError:
+                    print(f"Raw line: {line_text}")
+        
         assert response.status_code == 200
     except requests.exceptions.RequestException as e:
         print(f"\nRequest failed with error: {str(e)}")

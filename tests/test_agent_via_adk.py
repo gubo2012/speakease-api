@@ -55,8 +55,7 @@ async def run_agent_demo():
         print(f"Session created with ID: {session.id}")
 
         agent = agent_engines.get(app_name)
-
-        
+       
 
         print(f"Created session for user ID: {user_id}")
         print("Type 'quit' to exit.")
@@ -77,51 +76,6 @@ async def run_agent_demo():
                             if "text" in part:
                                 text_part = part["text"]
                                 print(f"Response: {text_part}")
-
-
-
-
-
-        
-
-        # # Create the root agent
-        # root_agent = adk.Agent(
-        #     engine_id=AGENT_ENGINE_ID,
-        #     project_id=PROJECT_ID,
-        #     location=LOCATION
-        # )
-
-        # print('set up root_agent')
-
-        # # Create the runner
-        # runner = adk.Runner(
-        #     agent=root_agent,
-        #     app_name=app_name,
-        #     session_service=session_service
-        # )
-
-        # print('set up runner')
-
-        # # Helper method to send query to the runner
-        # def call_agent(query, session_id, user_id):
-        #     content = types.Content(role='user', parts=[types.Part(text=query)])
-        #     events = runner.run(
-        #         user_id=user_id,
-        #         session_id=session_id,
-        #         new_message=content
-        #     )
-
-        #     for event in events:
-        #         if event.is_final_response():
-        #             final_response = event.content.parts[0].text
-        #             print("Agent Response: ", final_response)
-
-        # # Test the agent with some queries
-        # print("\nSending first query...")
-        # call_agent("Hello!", session.id, user_id)
-        
-        # print("\nSending second query...")
-        # call_agent("Thanks!", session.id, user_id)
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
