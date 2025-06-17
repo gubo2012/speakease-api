@@ -11,6 +11,7 @@ from app.services.se_user_management import (
 from app.services.se_prompt import get_outgoing_paraphrase, get_incoming_paraphrase
 from app.services.se_psql_management import add_text_log, get_session_text_logs, get_latest_text_logs
 from app.schemas.se_user import SEUserCreate, SEUserUpdate, SEUserResponse
+from app.services.se_agent import initialize_session, run_agent
 from pydantic import BaseModel
 import logging
 from typing import List, Optional, Dict, Any
